@@ -1,9 +1,9 @@
-from django.db.models import Count, Q
-from django.utils import timezone
-
 from .const import PAGINATE_BY
-from .models import Post
-
+from .models import Post, Comment
+from .post_queries import get_post_queryset
+from django.contrib.auth.mixins import UserPassesTestMixin
+from django.shortcuts import get_object_or_404
+from django.urls import reverse
 
 class PostListMixin:
     model = Post
@@ -17,18 +17,23 @@ class PostListMixin:
         )
 
 
-def get_post_queryset(manager, filter_published=True, annotate_comments=True):
-    queryset = manager.select_related()
-    if filter_published:
-        queryset = queryset.filter(
-            is_published=True,
-            category__is_published=True,
-            pub_date__lte=timezone.now(),
+class AuthorRequiredMixin(UserPassesTestMixin):
+    def test_func(self):
+        post = self.get_object()
+        return post.author == self.request.user
+
+
+class CommentMixin:
+    model = Comment
+
+    def get_object(self):
+        return get_object_or_404(
+            self.model,
+            id=self.kwargs["comment_id"],
+            post_id=self.kwargs["post_id"],
         )
-    if annotate_comments:
-        queryset = queryset.annotate(
-            comment_count=Count(
-                "comments", filter=Q(comments__is_published=True)
-            )
-        ).order_by("-pub_date")
-    return queryset
+
+    def get_success_url(self):
+        return reverse(
+            "blog:post_detail", kwargs={"post_id": self.kwargs["post_id"]}
+        )
