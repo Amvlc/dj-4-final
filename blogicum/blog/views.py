@@ -9,8 +9,6 @@ from django.views.generic import (
     ListView,
     UpdateView,
 )
-from django.utils import timezone
-from django.core.paginator import Paginator
 from django.http import Http404
 from .post_queries import get_post_queryset
 from .forms import CommentForm, EditProfileForm, PostForm
@@ -26,7 +24,8 @@ class PostListView(PostListMixin, ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context["comment_counts"] = {
-            post.id: post.comments.count() for post in self.object_list}
+            post.id: post.comments.count() for post in self.object_list
+        }
         return context
 
 
@@ -39,14 +38,20 @@ class PostDetailView(DetailView):
         queryset = get_post_queryset(filter_published=False)
         post = get_object_or_404(queryset, pk=self.kwargs["post_id"])
 
-        if not post.is_published and post.author != self.request.user and not self.request.user.is_superuser:
+        if (
+            not post.is_published
+            and post.author != self.request.user
+            and not self.request.user.is_superuser
+        ):
             raise Http404("Post not found")
 
         return post
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context["comments"] = self.object.comments.filter(is_published=True).select_related("author")
+        context["comments"] = self.object.comments.filter(
+            is_published=True
+        ).select_related("author")
         context["form"] = CommentForm()
         return context
 
@@ -56,14 +61,17 @@ class CategoryPostListView(ListView):
     paginate_by = 10
 
     def get_queryset(self):
-        now = timezone.now()
-        category = get_object_or_404(Category, slug=self.kwargs["category_slug"], is_published=True)
+        category = get_object_or_404(
+            Category, slug=self.kwargs["category_slug"], is_published=True
+        )
         return get_post_queryset(manager=category.posts)
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        category = get_object_or_404(Category, slug=self.kwargs["category_slug"], is_published=True)
-        context["category"] = category 
+        category = get_object_or_404(
+            Category, slug=self.kwargs["category_slug"], is_published=True
+        )
+        context["category"] = category
         return context
 
 
@@ -97,9 +105,7 @@ class EditPostView(LoginRequiredMixin, AuthorRequiredMixin, UpdateView):
 
 class DeletePostView(LoginRequiredMixin, AuthorRequiredMixin, DeleteView):
     model = Post
-    template_name = (
-        "blog/delete.html"
-    )
+    template_name = "blog/delete.html"
     pk_url_kwarg = "post_id"
 
     def get_success_url(self):
@@ -118,14 +124,19 @@ class ProfileView(ListView):
 
     def get_queryset(self):
         user = self.get_user()
-        return get_post_queryset(manager=Post.objects.filter(author=user), filter_published=self.request.user != user)
+        return get_post_queryset(
+            manager=Post.objects.filter(author=user),
+            filter_published=self.request.user != user,
+        )
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         user = self.get_user()
-        
+
         context["profile"] = user
-        context["comment_count"] = Comment.objects.filter(post__author=user, is_published=True).count()
+        context["comment_count"] = Comment.objects.filter(
+            post__author=user, is_published=True
+        ).count()
         return context
 
 

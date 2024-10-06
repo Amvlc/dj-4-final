@@ -5,6 +5,7 @@ from django.contrib.auth.mixins import UserPassesTestMixin
 from django.shortcuts import get_object_or_404
 from django.urls import reverse
 
+
 class PostListMixin:
     model = Post
     paginate_by = PAGINATE_BY
